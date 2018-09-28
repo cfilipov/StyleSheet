@@ -45,7 +45,11 @@ public struct RootStyle {
         switch mode {
         case .swizzle:
             do {
+
                 try swizzleInstance(View.self, originalSelector: ViewDidMoveToWindowSelector, swizzledSelector: #selector(View.__stylesheet_didMoveToWindow))
+                #if os(iOS) || os(tvOS)
+                try swizzleInstance(UIViewController.self, originalSelector: #selector(UIViewController.viewDidLoad), swizzledSelector: #selector(UIViewController.__stylesheet_viewDidLoad))
+                #endif
             } catch {
                 throw Failure.autoapplyFailed
             }
@@ -85,7 +89,7 @@ private func swizzleInstance<T: NSObject>(_ cls: T.Type, originalSelector: Selec
     guard
         let originalMethod = class_getInstanceMethod(cls, originalSelector),
         let swizzledMethod = class_getInstanceMethod(cls, swizzledSelector)
-    else { throw SwizzleError.selectorNotFound }
+        else { throw SwizzleError.selectorNotFound }
 
     let didAddMethod = class_addMethod(cls, originalSelector, method_getImplementation(swizzledMethod), method_getTypeEncoding(swizzledMethod))
 
@@ -99,3 +103,25 @@ private func swizzleInstance<T: NSObject>(_ cls: T.Type, originalSelector: Selec
 private enum SwizzleError: Error {
     case selectorNotFound
 }
+
+#if os(iOS) || os(tvOS)
+extension UIView {
+
+    @discardableResult
+    func styled<MarkerOverride>(_ marker: MarkerOverride.Type) -> Self {
+        RootStyle.style?.apply(to: self, marker: marker.self)
+        return self
+    }
+
+}
+
+private extension UIViewController {
+
+    @objc dynamic
+    func __stylesheet_viewDidLoad() {
+        __stylesheet_viewDidLoad()
+        RootStyle.apply(to: self)
+    }
+
+}
+#endif
