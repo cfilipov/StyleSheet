@@ -1,38 +1,116 @@
 import Foundation
 
 public protocol StyleApplicator {
-    func apply(to some: Any)
-    func apply<MarkerOverride>(to some: Any, marker: MarkerOverride.Type)
+    func apply(to some: AnyObject)
+    func apply(to some: AnyObject, marker override: Protocol)
 }
 
-public struct Style<Marker: Protocol, Target>: StyleApplicator {
+public protocol AnyStyle: StyleApplicator {
+    var marker: Protocol? { get }
+    var target: AnyClass { get }
+}
+
+public struct Style<Target: AnyObject>: StyleApplicator, AnyStyle {
     private let body: (Target) -> ()
+    public let marker: Protocol?
+    public let target: AnyClass
 
-    public func apply(to some: Any) {
-        if some is Marker, let some = some as? Target {
-            body(some)
+    public func apply(to some: AnyObject) {
+        if let marker = marker {
+            guard
+                let c = object_getClass(some),
+                class_conformsToProtocol(c, marker)
+            else {
+                return
+            }
         }
+        guard
+            let some = some as? Target
+        else {
+            return
+        }
+        body(some)
     }
 
-    public func apply<MarkerOverride>(to some: Any, marker: MarkerOverride.Type) {
-        if marker == Marker.self, let some = some as? Target {
-            body(some)
+    public func apply(to some: AnyObject, marker override: Protocol) {
+        guard
+            protocol_isEqual(marker, override),
+            let some = some as? Target
+        else {
+            return
         }
+        body(some)
     }
 
-    public init(body: @escaping (Target) -> ()) { self.body = body }
+    public init(
+        _ target: Target.Type,
+        _ marker: Protocol? = nil,
+        body: @escaping (Target) -> ()
+    ) {
+        self.body = body
+        self.marker = marker
+        self.target = Target.self
+    }
 }
 
 public struct StyleSheet: StyleApplicator {
-    private let styles: [StyleApplicator]
+    let styles: [AnyStyle]
 
-    public func apply(to some: Any) {
-        styles.lazy.reversed().forEach { $0.apply(to: some) }
+    public func apply(to some: AnyObject) {
+        styles.forEach { $0.apply(to: some) }
     }
 
-    public func apply<MarkerOverride>(to some: Any, marker: MarkerOverride.Type) {
-        styles.lazy.reversed().forEach { $0.apply(to: some, marker: marker) }
+    public func apply(to some: AnyObject, marker override: Protocol) {
+        styles.forEach { $0.apply(to: some, marker: override) }
     }
 
-    public init(styles: [StyleApplicator]) { self.styles = styles }
+    public init(styles: [AnyStyle]) {
+        self.styles = styles.sorted(by: compareStyle)
+    }
+}
+
+func class_getAllSuperclasses(_ c: AnyClass) -> [AnyClass] {
+    var result = [AnyClass]()
+    var sup: AnyClass? = class_getSuperclass(c)
+    while let s = sup {
+        result.append(s)
+        sup = class_getSuperclass(s)
+    }
+    return result
+}
+
+func class_isSubclass(_ a: AnyClass, _ b: AnyClass) -> Bool {
+    return class_getAllSuperclasses(a).contains(where: { $0 == b })
+}
+
+func compareStyle(_ a: AnyStyle, _ b: AnyStyle) -> Bool {
+    if a.target == b.target {
+        return compareMarker(a, b)
+    } else {
+        return compareTarget(a, b)
+    }
+}
+
+func compareTarget(_ a: AnyStyle, _ b: AnyStyle) -> Bool {
+    if a.target == b.target {
+        return false
+    }
+    if a.target == AnyObject.self {
+        return true
+    }
+    if class_isSubclass(b.target, a.target) {
+        return true
+    }
+    return false
+}
+
+func compareMarker(_ a: AnyStyle, _ b: AnyStyle) -> Bool {
+    switch (a.marker, b.marker) {
+    case (.none, .some(_)):
+        return true
+    case (.some(let aMarker), .some(let bMarker))
+        where protocol_conformsToProtocol(bMarker, aMarker):
+        return true
+    default: return false
+    }
 }

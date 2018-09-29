@@ -108,8 +108,8 @@ private enum SwizzleError: Error {
 extension UIView {
 
     @discardableResult
-    func styled<MarkerOverride>(_ marker: MarkerOverride.Type) -> Self {
-        RootStyle.style?.apply(to: self, marker: marker.self)
+    func styled(_ marker: Protocol) -> Self {
+        RootStyle.style?.apply(to: self, marker: marker)
         return self
     }
 
