@@ -34,7 +34,7 @@ public struct RootStyle {
     public static func apply(to some: AnyObject) {
         if objc_getAssociatedObject(some, &isStyleAppliedKey) == nil {
             objc_setAssociatedObject(some, &isStyleAppliedKey, true, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
-            style?.apply(to: some)
+            style?.apply(to: some, marker: nil)
         }
     }
 

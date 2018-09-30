@@ -66,6 +66,23 @@ class StyleSheetTests: XCTestCase {
         XCTAssertEqual(c.tag, "C_P1")
     }
 
+    func testOperator() {
+        let stylesheet = StyleSheet(styles: [
+            (C.self) => { $0.tag = "C" },
+            (D.self) => { $0.tag = "D" },
+            (C.self, P1.self) => { $0.tag = "C_P1" },
+            (D.self, P2.self) => { $0.tag = "D_P2" },
+        ])
+
+        let c = C()
+        stylesheet.apply(to: c)
+        XCTAssertEqual(c.tag, "C_P1")
+
+        let d = D()
+        stylesheet.apply(to: d)
+        XCTAssertEqual(d.tag, "D_P2")
+    }
+
     func test_class_getAllSuperclasses() {
         let classes = class_getAllSuperclasses(D.self)
 

@@ -1,8 +1,7 @@
 import Foundation
 
 public protocol StyleApplicator {
-    func apply(to some: AnyObject)
-    func apply(to some: AnyObject, marker override: Protocol)
+    func apply(to some: AnyObject, marker override: Protocol?)
 }
 
 public protocol AnyStyle: StyleApplicator {
@@ -15,8 +14,19 @@ public struct Style<Target: AnyObject>: StyleApplicator, AnyStyle {
     public let marker: Protocol?
     public let target: AnyClass
 
-    public func apply(to some: AnyObject) {
-        if let marker = marker {
+    public func apply(to some: AnyObject, marker override: Protocol? = nil) {
+        guard
+            let some = some as? Target
+        else {
+            return
+        }
+        if let override = override {
+            guard
+                protocol_isEqual(marker, override)
+            else {
+                return
+            }
+        } else if let marker = marker {
             guard
                 let c = object_getClass(some),
                 class_conformsToProtocol(c, marker)
@@ -24,28 +34,13 @@ public struct Style<Target: AnyObject>: StyleApplicator, AnyStyle {
                 return
             }
         }
-        guard
-            let some = some as? Target
-        else {
-            return
-        }
-        body(some)
-    }
-
-    public func apply(to some: AnyObject, marker override: Protocol) {
-        guard
-            protocol_isEqual(marker, override),
-            let some = some as? Target
-        else {
-            return
-        }
         body(some)
     }
 
     public init(
         _ target: Target.Type,
         _ marker: Protocol? = nil,
-        body: @escaping (Target) -> ()
+        _ body: @escaping (Target) -> ()
     ) {
         self.body = body
         self.marker = marker
@@ -56,11 +51,7 @@ public struct Style<Target: AnyObject>: StyleApplicator, AnyStyle {
 public struct StyleSheet: StyleApplicator {
     let styles: [AnyStyle]
 
-    public func apply(to some: AnyObject) {
-        styles.forEach { $0.apply(to: some) }
-    }
-
-    public func apply(to some: AnyObject, marker override: Protocol) {
+    public func apply(to some: AnyObject, marker override: Protocol? = nil) {
         styles.forEach { $0.apply(to: some, marker: override) }
     }
 
@@ -114,3 +105,15 @@ func compareMarker(_ a: AnyStyle, _ b: AnyStyle) -> Bool {
     default: return false
     }
 }
+
+infix operator => : AssignmentPrecedence
+
+public func => <Target: AnyObject>(left: (Target.Type, Protocol?), right: @escaping (Target) -> ()) -> Style<Target> {
+    let (target, marker) = left
+    return Style(target, marker, right)
+}
+
+public func => <Target: AnyObject>(left: (Target.Type), right: @escaping (Target) -> ()) -> Style<Target> {
+    return Style(left, nil, right)
+}
+
