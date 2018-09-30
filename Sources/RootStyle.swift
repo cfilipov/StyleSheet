@@ -105,12 +105,17 @@ private enum SwizzleError: Error {
 }
 
 #if os(iOS) || os(tvOS)
-extension UIView {
+public extension UIView {
 
     @discardableResult
-    func styled(_ marker: Protocol) -> Self {
+    public func styled(_ marker: Protocol) -> Self {
         RootStyle.style?.apply(to: self, marker: marker)
         return self
+    }
+
+    public convenience init(style marker: Protocol) {
+        self.init(frame: .zero)
+        RootStyle.style?.apply(to: self, marker: marker)
     }
 
 }
