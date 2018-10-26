@@ -8,6 +8,13 @@ private typealias View = NSView
 private let ViewDidMoveToWindowSelector = #selector(View.viewDidMoveToWindow)
 #endif
 
+public enum Failure: Error {
+    case notOnMainThread
+    case alreadyInitialized
+    case autoapplyFailed
+    case redundantStyles(String)
+}
+
 public struct RootStyle {
     private static var isStyleAppliedKey = "isStyleApplied"
 
@@ -15,12 +22,6 @@ public struct RootStyle {
         case swizzle
         @available(OSX, unavailable)
         case appearance
-    }
-
-    public enum Failure: Error {
-        case notOnMainThread
-        case alreadyInitialized
-        case autoapplyFailed
     }
 
     public private(set) static var style: StyleApplicator?

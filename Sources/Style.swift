@@ -80,7 +80,7 @@ extension Array where Element == AnyStyle {
         try forEach {
             let styleId = $0.styleId
             if let _ = ids[styleId] {
-                throw NSError(domain: "FerrumError", code: 0, userInfo: nil)
+                throw Failure.redundantStyles(styleId)
             }
             ids[styleId] = ()
         }
