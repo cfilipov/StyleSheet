@@ -17,21 +17,21 @@ public struct Style<Target: AnyObject>: StyleApplicator, AnyStyle {
     public func apply(to some: AnyObject, marker override: Protocol? = nil) {
         guard
             let some = some as? Target
-        else {
-            return
+            else {
+                return
         }
         if let override = override {
             guard
                 protocol_isEqual(marker, override)
-            else {
-                return
+                else {
+                    return
             }
         } else if let marker = marker {
             guard
                 let c = object_getClass(some),
                 class_conformsToProtocol(c, marker)
-            else {
-                return
+                else {
+                    return
             }
         }
         body(some)
@@ -41,10 +41,24 @@ public struct Style<Target: AnyObject>: StyleApplicator, AnyStyle {
         _ target: Target.Type,
         _ marker: Protocol? = nil,
         _ body: @escaping (Target) -> ()
-    ) {
+        ) {
         self.body = body
         self.marker = marker
         self.target = Target.self
+    }
+
+    public static func == (lhs: Style<Target>, rhs: Style<Target>) -> Bool {
+        return protocol_isEqual(lhs.marker, rhs.marker) && lhs.target == rhs.target
+    }
+}
+
+extension AnyStyle {
+    var styleId: String {
+        if let marker = marker {
+            return NSStringFromClass(target) +  " " + NSStringFromProtocol(marker)
+        } else {
+            return NSStringFromClass(target)
+        }
     }
 }
 
@@ -55,8 +69,24 @@ public struct StyleSheet: StyleApplicator {
         styles.forEach { $0.apply(to: some, marker: override) }
     }
 
-    public init(styles: [AnyStyle]) {
-        self.styles = styles.sorted(by: compareStyle)
+    public init(styles: [AnyStyle]) throws {
+        self.styles = try styles.sorted(by: compareStyle).throwIfNotDistinct()
+    }
+}
+
+extension Array where Element == AnyStyle {
+    func throwIfNotDistinct() throws -> [Element] {
+        var ids = [String: Void]()
+        try forEach {
+            let styleId = $0.styleId
+            print("style: \(styleId)")
+            if let _ = ids[styleId] {
+                throw NSError(domain: "FerrumError", code: 0, userInfo: nil)
+            }
+            ids[styleId] = ()
+        }
+        print("All Styles: \(ids)")
+        return self
     }
 }
 
@@ -116,4 +146,3 @@ public func => <Target: AnyObject>(left: (Target.Type, Protocol?), right: @escap
 public func => <Target: AnyObject>(left: (Target.Type), right: @escaping (Target) -> ()) -> Style<Target> {
     return Style(left, nil, right)
 }
-

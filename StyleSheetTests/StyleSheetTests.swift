@@ -22,7 +22,7 @@ class Z: NSObject {}
 class StyleSheetTests: XCTestCase {
 
     func testOrderOfStyles() {
-        let stylesheet = StyleSheet(styles: [
+        let stylesheet = try! StyleSheet(styles: [
             Style(A.self) { $0.tag = "A" },
             Style(B.self) { $0.tag = "B" }
         ])
@@ -33,7 +33,7 @@ class StyleSheetTests: XCTestCase {
 
     // This test used to fail, now with sorting it passes
     func testOrderOfStylesRev() {
-        let stylesheet = StyleSheet(styles: [
+        let stylesheet = try! StyleSheet(styles: [
             Style(B.self) { $0.tag = "B" },
             Style(A.self) { $0.tag = "A" }
         ])
@@ -43,7 +43,7 @@ class StyleSheetTests: XCTestCase {
     }
 
     func testOrderOfStylesMarkerRev() {
-        let stylesheet = StyleSheet(styles: [
+        let stylesheet = try! StyleSheet(styles: [
             Style(D.self, P2.self) { $0.tag = "D_P2" },
             Style(D.self, P1.self) { $0.tag = "D_P1" },
             Style(C.self, P1.self) { $0.tag = "C_P1" }
@@ -67,7 +67,7 @@ class StyleSheetTests: XCTestCase {
     }
 
     func testOperator() {
-        let stylesheet = StyleSheet(styles: [
+        let stylesheet = try! StyleSheet(styles: [
             (C.self) => { $0.tag = "C" },
             (D.self) => { $0.tag = "D" },
             (C.self, P1.self) => { $0.tag = "C_P1" },
@@ -163,7 +163,7 @@ class StyleSheetTests: XCTestCase {
     }
 
     func test_stylesheetOrder() {
-        let stylesheet = StyleSheet(styles: [
+        let stylesheet = try! StyleSheet(styles: [
             Style(B.self, P2.self) { _ in },
             Style(B.self, P1.self) { _ in },
             Style(NSObject.self, P2.self) { _ in },
@@ -190,8 +190,28 @@ class StyleSheetTests: XCTestCase {
         }.isEmpty)
     }
 
+    func test_stylesheetDuplicate() {
+        try XCTAssertThrowsError(StyleSheet(styles: [
+            Style(B.self) { _ in },
+            Style(NSObject.self, P2.self) { _ in },
+            Style(NSObject.self, P1.self) { _ in },
+            Style(B.self) { _ in },
+            Style(A.self, P1.self) { _ in },
+            ]))
+    }
+
+    func test_stylesheetDuplicate2() {
+        try XCTAssertThrowsError(StyleSheet(styles: [
+            Style(A.self, P1.self) { _ in },
+            Style(NSObject.self, P2.self) { _ in },
+            Style(NSObject.self, P1.self) { _ in },
+            Style(B.self) { _ in },
+            Style(A.self, P1.self) { _ in },
+            ]))
+    }
+
     func test_stylesheetOrder2() {
-        let stylesheet = StyleSheet(styles: [
+        let stylesheet = try! StyleSheet(styles: [
             Style(B.self) { $0.tag = "B" },
             Style(A.self) { $0.tag = "A" }
         ])
