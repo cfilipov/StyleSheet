@@ -79,13 +79,11 @@ extension Array where Element == AnyStyle {
         var ids = [String: Void]()
         try forEach {
             let styleId = $0.styleId
-            print("style: \(styleId)")
             if let _ = ids[styleId] {
                 throw NSError(domain: "FerrumError", code: 0, userInfo: nil)
             }
             ids[styleId] = ()
         }
-        print("All Styles: \(ids)")
         return self
     }
 }
